@@ -73,26 +73,26 @@ function renderDashboard(data) {
                 let cveHtml = '';
                 if(p.cves && p.cves.length > 0) {
                     p.cves.forEach(cve => {
-                        cveHtml += \`<span class="cve-badge">\${cve}</span>\`;
+                        cveHtml += `<span class="cve-badge">${cve}</span>`;
                     });
                 }
                 
                 // Remediation Advice generator
                 let remediationHtml = '';
                 if(p.cves && p.cves.length > 0) {
-                    remediationHtml = \`<a href="https://nvd.nist.gov/vuln/detail/\${p.cves[0]}" target="_blank" class="remediation-link">↳ View Remediation & Details for \${p.cves[0]}</a>\`;
+                    remediationHtml = `<a href="https://nvd.nist.gov/vuln/detail/${p.cves[0]}" target="_blank" class="remediation-link">↳ View Remediation & Details for ${p.cves[0]}</a>`;
                 }
 
-                portsHtml += \`
-                    <div class="port-item" data-severity="\${p.severity || 'low'}">
-                        <div class="port-number">\${p.port}/\${p.protocol}</div>
+                portsHtml += `
+                    <div class="port-item" data-severity="${p.severity || 'low'}">
+                        <div class="port-number">${p.port}/${p.protocol}</div>
                         <div class="port-details">
-                            <div class="service-name">\${p.service || 'Unknown Service'}</div>
-                            \${cveHtml}
-                            \${remediationHtml ? '<br>' + remediationHtml : ''}
+                            <div class="service-name">${p.service || 'Unknown Service'}</div>
+                            ${cveHtml}
+                            ${remediationHtml ? '<br>' + remediationHtml : ''}
                         </div>
                     </div>
-                \`;
+                `;
             });
         } else {
             portsHtml = '<p class="text-secondary">No open ports mapped.</p>';
@@ -100,26 +100,26 @@ function renderDashboard(data) {
 
         let credsHtml = '';
         if(host.credentials && host.credentials.length > 0) {
-            let credItems = host.credentials.map(c => \`<div class="cred-item">[\${c.service.toUpperCase()}] \${c.user} : \${c.pass}</div>\`).join('');
-            credsHtml = \`
+            let credItems = host.credentials.map(c => `<div class="cred-item">[${c.service.toUpperCase()}] ${c.user} : ${c.pass}</div>`).join('');
+            credsHtml = `
                 <div class="credentials-box">
                     <h4>⚠ Weak Credentials Discovered</h4>
-                    \${credItems}
+                    ${credItems}
                 </div>
-            \`;
+            `;
         }
 
-        card.innerHTML = \`
+        card.innerHTML = `
             <div class="host-header">
-                <div class="host-ip">⯈ \${host.ip}</div>
+                <div class="host-ip">⯈ ${host.ip}</div>
             </div>
             <div class="host-body">
                 <div class="port-list">
-                    \${portsHtml}
+                    ${portsHtml}
                 </div>
-                \${credsHtml}
+                ${credsHtml}
             </div>
-        \`;
+        `;
 
         // Store data attributes for filtering
         card.setAttribute('data-searchtext', JSON.stringify(host).toLowerCase());
