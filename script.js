@@ -1,157 +1,273 @@
-document.addEventListener('DOMContentLoaded', () => {
-    let scanData = [];
-    
-    // Attempt to load data injected by the bash script
+// ============================================================================
+// VULNER ZX301 - Interactive Report Dashboard
+// Handles: JSON parsing, table rendering, column filtering, sorting
+// ============================================================================
+
+let scanData = [];      // Parsed scan data from the injected JSON
+let flatRows = [];      // Flattened array of rows for the table
+let currentSort = { col: -1, asc: true };  // Track current sort state
+
+// ============================================================================
+// INITIALIZATION
+// ============================================================================
+document.addEventListener('DOMContentLoaded', function() {
+
+    // 1. Load JSON data injected by the bash script into the vulnerData tag
     try {
-        const rawData = document.getElementById('vulnerData').textContent;
-        if(rawData.trim() !== '[]') {
+        var rawData = document.getElementById('vulnerData').textContent.trim();
+        if (rawData && rawData !== '[]') {
             scanData = JSON.parse(rawData);
         }
     } catch(e) {
-        console.error("No valid JSON payload found.");
+        console.error("Failed to parse JSON payload:", e.message);
     }
 
-    // Dummy data for preview if no actual data is present
-    if(scanData.length === 0) {
-        scanData = [
-            {
-                ip: "192.168.1.105",
-                ports: [
-                    { port: "21", protocol: "tcp", service: "vsftpd 2.3.4", cves: ["CVE-2011-2523"], severity: "critical" },
-                    { port: "22", protocol: "tcp", service: "OpenSSH 7.2p2", cves: [], severity: "low" },
-                    { port: "80", protocol: "tcp", service: "Apache httpd 2.4.49", cves: ["CVE-2021-41773"], severity: "high" }
-                ],
-                credentials: [
-                    { service: "ftp", user: "anonymous", pass: "" },
-                    { service: "ssh", user: "admin", pass: "password123" }
-                ]
-            }
-        ];
-    }
-
-    renderDashboard(scanData);
-});
-
-function calculateStats(data) {
-    let totalPorts = 0;
-    let totalVulns = 0;
-    let totalCreds = 0;
-
-    data.forEach(host => {
-        totalPorts += (host.ports || []).length;
-        if(host.ports) {
-            host.ports.forEach(p => {
-                totalVulns += (p.cves || []).length;
-            });
-        }
-        totalCreds += (host.credentials || []).length;
-    });
-
-    document.getElementById('totalHosts').innerText = data.length;
-    document.getElementById('totalPorts').innerText = totalPorts;
-    document.getElementById('totalVulns').innerText = totalVulns;
-    document.getElementById('totalCreds').innerText = totalCreds;
-}
-
-function renderDashboard(data) {
-    calculateStats(data);
-    const container = document.getElementById('hostsList');
-    container.innerHTML = '';
-
-    if (data.length === 0) {
-        container.innerHTML = '<p>No hosts found matching the criteria.</p>';
+    // 2. If no data was injected, show an empty state (no dummy data)
+    if (!scanData || scanData.length === 0) {
+        document.getElementById('tableBody').innerHTML =
+            '<tr><td colspan="8" style="text-align:center; padding:40px; color:#94a3b8;">No scan data available. Run the VULNER script to generate results.</td></tr>';
         return;
     }
 
-    data.forEach(host => {
-        const card = document.createElement('div');
-        card.className = 'host-card';
-        
-        let portsHtml = '';
-        if(host.ports && host.ports.length > 0) {
-            host.ports.forEach(p => {
-                let cveHtml = '';
-                if(p.cves && p.cves.length > 0) {
-                    p.cves.forEach(cve => {
-                        cveHtml += `<span class="cve-badge">${cve}</span>`;
-                    });
-                }
-                
-                // Remediation Advice generator
-                let remediationHtml = '';
-                if(p.cves && p.cves.length > 0) {
-                    remediationHtml = `<a href="https://nvd.nist.gov/vuln/detail/${p.cves[0]}" target="_blank" class="remediation-link">↳ View Remediation & Details for ${p.cves[0]}</a>`;
-                }
-
-                portsHtml += `
-                    <div class="port-item" data-severity="${p.severity || 'low'}">
-                        <div class="port-number">${p.port}/${p.protocol}</div>
-                        <div class="port-details">
-                            <div class="service-name">${p.service || 'Unknown Service'}</div>
-                            ${cveHtml}
-                            ${remediationHtml ? '<br>' + remediationHtml : ''}
-                        </div>
-                    </div>
-                `;
+    // 3. Flatten the data: one row per port entry, with host IP and credentials attached
+    flatRows = [];
+    scanData.forEach(function(host) {
+        // Build a credentials lookup for this host
+        var hostCreds = {};
+        if (host.credentials && host.credentials.length > 0) {
+            host.credentials.forEach(function(c) {
+                hostCreds[c.service] = c.user + ' : ' + c.pass;
             });
-        } else {
-            portsHtml = '<p class="text-secondary">No open ports mapped.</p>';
         }
 
-        let credsHtml = '';
-        if(host.credentials && host.credentials.length > 0) {
-            let credItems = host.credentials.map(c => `<div class="cred-item">[${c.service.toUpperCase()}] ${c.user} : ${c.pass}</div>`).join('');
-            credsHtml = `
-                <div class="credentials-box">
-                    <h4>⚠ Weak Credentials Discovered</h4>
-                    ${credItems}
-                </div>
-            `;
+        if (host.ports && host.ports.length > 0) {
+            host.ports.forEach(function(p) {
+                flatRows.push({
+                    ip: host.ip,
+                    port: p.port,
+                    protocol: p.protocol || 'tcp',
+                    state: p.state || 'open',
+                    service: p.service || 'Unknown',
+                    version: p.version || 'Unknown',
+                    severity: p.severity || 'low',
+                    cred: hostCreds[p.service] || ''
+                });
+            });
         }
+    });
 
-        card.innerHTML = `
-            <div class="host-header">
-                <div class="host-ip">⯈ ${host.ip}</div>
-            </div>
-            <div class="host-body">
-                <div class="port-list">
-                    ${portsHtml}
-                </div>
-                ${credsHtml}
-            </div>
-        `;
+    // 4. Populate filter dropdowns based on actual data
+    populateFilters();
 
-        // Store data attributes for filtering
-        card.setAttribute('data-searchtext', JSON.stringify(host).toLowerCase());
-        container.appendChild(card);
+    // 5. Calculate and display statistics
+    calculateStats();
+
+    // 6. Render the full table
+    renderTable(flatRows);
+});
+
+// ============================================================================
+// STATISTICS
+// ============================================================================
+function calculateStats() {
+    var uniqueHosts = {};
+    var totalPorts = 0;
+    var totalCreds = 0;
+    var vulnPorts = 0;
+
+    scanData.forEach(function(host) {
+        uniqueHosts[host.ip] = true;
+        totalPorts += (host.ports || []).length;
+        totalCreds += (host.credentials || []).length;
+        if (host.ports) {
+            host.ports.forEach(function(p) {
+                if (p.severity === 'high' || p.severity === 'medium') {
+                    vulnPorts++;
+                }
+            });
+        }
+    });
+
+    document.getElementById('totalHosts').innerText = Object.keys(uniqueHosts).length;
+    document.getElementById('totalPorts').innerText = totalPorts;
+    document.getElementById('totalVulns').innerText = vulnPorts;
+    document.getElementById('totalCreds').innerText = totalCreds;
+}
+
+// ============================================================================
+// FILTER DROPDOWNS
+// ============================================================================
+function populateFilters() {
+    var ips = {};
+    var services = {};
+    var states = {};
+
+    flatRows.forEach(function(r) {
+        ips[r.ip] = true;
+        services[r.service] = true;
+        states[r.state] = true;
+    });
+
+    var ipSelect = document.getElementById('filterIP');
+    Object.keys(ips).sort().forEach(function(ip) {
+        var opt = document.createElement('option');
+        opt.value = ip;
+        opt.textContent = ip;
+        ipSelect.appendChild(opt);
+    });
+
+    var svcSelect = document.getElementById('filterService');
+    Object.keys(services).sort().forEach(function(svc) {
+        var opt = document.createElement('option');
+        opt.value = svc;
+        opt.textContent = svc;
+        svcSelect.appendChild(opt);
+    });
+
+    var stateSelect = document.getElementById('filterState');
+    Object.keys(states).sort().forEach(function(st) {
+        var opt = document.createElement('option');
+        opt.value = st;
+        opt.textContent = st;
+        stateSelect.appendChild(opt);
     });
 }
 
-function filterResults() {
-    const searchText = document.getElementById('searchInput').value.toLowerCase();
-    const severityFilter = document.getElementById('severityFilter').value;
-    const cards = document.querySelectorAll('.host-card');
+// ============================================================================
+// FILTERING
+// ============================================================================
+function applyFilters() {
+    var fIP = document.getElementById('filterIP').value;
+    var fService = document.getElementById('filterService').value;
+    var fState = document.getElementById('filterState').value;
+    var fSeverity = document.getElementById('filterSeverity').value;
+    var fProtocol = document.getElementById('filterProtocol').value;
 
-    cards.forEach(card => {
-        const textMatch = card.getAttribute('data-searchtext').includes(searchText);
-        let severityMatch = true;
+    var filtered = flatRows.filter(function(r) {
+        if (fIP !== 'all' && r.ip !== fIP) return false;
+        if (fService !== 'all' && r.service !== fService) return false;
+        if (fState !== 'all' && r.state !== fState) return false;
+        if (fSeverity !== 'all' && r.severity !== fSeverity) return false;
+        if (fProtocol !== 'all' && r.protocol !== fProtocol) return false;
+        return true;
+    });
 
-        if (severityFilter !== 'all') {
-            const ports = card.querySelectorAll('.port-item');
-            let hasSeverity = false;
-            ports.forEach(p => {
-                const sev = p.getAttribute('data-severity');
-                if (severityFilter === 'high' && (sev === 'critical' || sev === 'high')) hasSeverity = true;
-                if (severityFilter === 'medium' && sev === 'medium') hasSeverity = true;
-                if (severityFilter === 'low' && sev === 'low') hasSeverity = true;
-            });
-            severityMatch = hasSeverity || (ports.length === 0 && severityFilter === 'low'); // Show empty ones only on low/all
+    renderTable(filtered);
+}
+
+function resetFilters() {
+    document.getElementById('filterIP').value = 'all';
+    document.getElementById('filterService').value = 'all';
+    document.getElementById('filterState').value = 'all';
+    document.getElementById('filterSeverity').value = 'all';
+    document.getElementById('filterProtocol').value = 'all';
+    renderTable(flatRows);
+}
+
+// ============================================================================
+// SORTING
+// ============================================================================
+function sortTable(colIndex) {
+    // Toggle sort direction if clicking same column
+    if (currentSort.col === colIndex) {
+        currentSort.asc = !currentSort.asc;
+    } else {
+        currentSort.col = colIndex;
+        currentSort.asc = true;
+    }
+
+    // Map column index to row property
+    var keys = ['ip', 'port', 'protocol', 'state', 'service', 'version', 'severity', 'cred'];
+    var key = keys[colIndex];
+
+    // Get currently visible rows from the table
+    var visibleRows = getVisibleRows();
+
+    visibleRows.sort(function(a, b) {
+        var valA = a[key];
+        var valB = b[key];
+
+        // Numeric sort for port numbers
+        if (key === 'port') {
+            valA = parseInt(valA) || 0;
+            valB = parseInt(valB) || 0;
         }
 
-        if (textMatch && severityMatch) {
-            card.style.display = 'block';
-        } else {
-            card.style.display = 'none';
+        if (valA < valB) return currentSort.asc ? -1 : 1;
+        if (valA > valB) return currentSort.asc ? 1 : -1;
+        return 0;
+    });
+
+    renderTable(visibleRows);
+
+    // Update sort indicators in header
+    var ths = document.querySelectorAll('.results-table th');
+    ths.forEach(function(th, i) {
+        th.classList.remove('sort-asc', 'sort-desc');
+        if (i === colIndex) {
+            th.classList.add(currentSort.asc ? 'sort-asc' : 'sort-desc');
         }
     });
+}
+
+function getVisibleRows() {
+    // Re-filter to get the current visible set
+    var fIP = document.getElementById('filterIP').value;
+    var fService = document.getElementById('filterService').value;
+    var fState = document.getElementById('filterState').value;
+    var fSeverity = document.getElementById('filterSeverity').value;
+    var fProtocol = document.getElementById('filterProtocol').value;
+
+    return flatRows.filter(function(r) {
+        if (fIP !== 'all' && r.ip !== fIP) return false;
+        if (fService !== 'all' && r.service !== fService) return false;
+        if (fState !== 'all' && r.state !== fState) return false;
+        if (fSeverity !== 'all' && r.severity !== fSeverity) return false;
+        if (fProtocol !== 'all' && r.protocol !== fProtocol) return false;
+        return true;
+    });
+}
+
+// ============================================================================
+// TABLE RENDERING
+// ============================================================================
+function renderTable(rows) {
+    var tbody = document.getElementById('tableBody');
+    tbody.innerHTML = '';
+
+    if (rows.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:30px; color:#94a3b8;">No results match the current filters.</td></tr>';
+        return;
+    }
+
+    rows.forEach(function(r) {
+        var tr = document.createElement('tr');
+
+        // State CSS class
+        var stateClass = 'state-' + r.state;
+
+        // Severity badge
+        var sevHtml = '<span class="severity-badge severity-' + r.severity + '">' + r.severity + '</span>';
+
+        // Credentials cell
+        var credHtml = r.cred ? '<span class="cred-badge">' + escapeHtml(r.cred) + '</span>' : '<span style="color:#475569">—</span>';
+
+        tr.innerHTML =
+            '<td>' + escapeHtml(r.ip) + '</td>' +
+            '<td><span class="port-num">' + escapeHtml(r.port) + '</span></td>' +
+            '<td>' + escapeHtml(r.protocol) + '</td>' +
+            '<td><span class="' + stateClass + '">' + escapeHtml(r.state) + '</span></td>' +
+            '<td>' + escapeHtml(r.service) + '</td>' +
+            '<td>' + escapeHtml(r.version) + '</td>' +
+            '<td>' + sevHtml + '</td>' +
+            '<td>' + credHtml + '</td>';
+
+        tbody.appendChild(tr);
+    });
+}
+
+// Prevent XSS by escaping HTML characters
+function escapeHtml(str) {
+    if (!str) return '';
+    return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }

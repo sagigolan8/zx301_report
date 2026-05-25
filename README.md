@@ -4,11 +4,24 @@ This repository holds the static frontend assets (HTML, CSS, JS) for the `PERES2
 
 ## How It Works
 
-The bash script runs network scans and brute forces credentials. Instead of just dumping raw text files, it constructs a JSON payload containing all findings (Hosts, Ports, CVEs, Credentials).
+The bash script runs network scans, discovers vulnerabilities, and brute forces credentials. It then compiles all results into a structured JSON payload containing:
+- **Host IPs** discovered on the network
+- **Port details**: port number, protocol, state, service name, and version
+- **Severity ratings**: high, medium, low based on port risk assessment
+- **Cracked credentials**: service, username, and password pairs
 
-The script then uses `curl` or `wget` to download `index.html`, `style.css`, and `script.js` from this repository. It injects the JSON payload directly into the `index.html` file and opens it in a local web browser, providing a beautiful, filterable dashboard of the vulnerabilities!
+The script uses `curl` or `wget` to download `index.html`, `style.css`, and `script.js` from this repository. It then injects the JSON payload directly into `index.html` and opens it in the browser.
+
+## Features
+
+- **Sortable Table**: Click any column header (Host, Port, Protocol, State, Service, Version, Severity) to sort ascending/descending
+- **Per-Column Filters**: Filter by Host IP, Service, State, Severity, or Protocol independently
+- **Statistics Dashboard**: Live cards showing Total Hosts, Open Ports, Vulnerabilities, and Weak Credentials
+- **Reset Filters**: One-click button to clear all active filters
+- **XSS Safe**: All data is HTML-escaped before rendering
+- **No External Libraries**: Pure HTML, CSS, and JavaScript — no dependencies
 
 ### Files
-- `index.html`: The structural template.
-- `style.css`: The styling (Dark mode, Hacker-themed).
-- `script.js`: Handles JSON parsing, chart rendering, and filtering logic.
+- `index.html`: The table-based dashboard template
+- `style.css`: Dark-themed professional styling
+- `script.js`: Handles JSON parsing, table rendering, filtering, and sorting

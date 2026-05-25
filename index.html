@@ -13,49 +13,72 @@
                 <h1>VULNER ZX301</h1>
                 <p class="subtitle">Automated Network Vulnerability Report</p>
             </div>
-            <div class="header-right">
-                <input type="text" id="searchInput" placeholder="Search IP, Port, or Vulnerability..." onkeyup="filterResults()">
-                <select id="severityFilter" onchange="filterResults()">
-                    <option value="all">All Severities</option>
-                    <option value="high">High & Critical</option>
-                    <option value="medium">Medium</option>
-                    <option value="low">Low</option>
-                </select>
-            </div>
         </header>
 
-        <main class="content">
-            <div class="summary-cards">
-                <div class="card stat-card">
-                    <h3>Total Hosts Scanned</h3>
-                    <div class="stat-value" id="totalHosts">0</div>
-                </div>
-                <div class="card stat-card">
-                    <h3>Open Ports Found</h3>
-                    <div class="stat-value" id="totalPorts">0</div>
-                </div>
-                <div class="card stat-card">
-                    <h3>Vulnerabilities Detected</h3>
-                    <div class="stat-value text-danger" id="totalVulns">0</div>
-                </div>
-                <div class="card stat-card">
-                    <h3>Weak Credentials</h3>
-                    <div class="stat-value text-warning" id="totalCreds">0</div>
-                </div>
+        <div class="summary-cards">
+            <div class="card stat-card">
+                <h3>Total Hosts</h3>
+                <div class="stat-value" id="totalHosts">0</div>
             </div>
+            <div class="card stat-card">
+                <h3>Open Ports</h3>
+                <div class="stat-value" id="totalPorts">0</div>
+            </div>
+            <div class="card stat-card">
+                <h3>Vulnerabilities</h3>
+                <div class="stat-value text-danger" id="totalVulns">0</div>
+            </div>
+            <div class="card stat-card">
+                <h3>Weak Credentials</h3>
+                <div class="stat-value text-warning" id="totalCreds">0</div>
+            </div>
+        </div>
 
-            <div class="results-container">
-                <div class="section-title">
-                    <h2>Host Details & Vulnerabilities</h2>
-                </div>
-                <div id="hostsList" class="hosts-grid">
-                    <!-- Data injected via JS -->
-                </div>
-            </div>
+        <div class="filters-bar">
+            <select id="filterIP" onchange="applyFilters()">
+                <option value="all">All Hosts</option>
+            </select>
+            <select id="filterService" onchange="applyFilters()">
+                <option value="all">All Services</option>
+            </select>
+            <select id="filterState" onchange="applyFilters()">
+                <option value="all">All States</option>
+            </select>
+            <select id="filterSeverity" onchange="applyFilters()">
+                <option value="all">All Severities</option>
+                <option value="high">High</option>
+                <option value="medium">Medium</option>
+                <option value="low">Low</option>
+            </select>
+            <select id="filterProtocol" onchange="applyFilters()">
+                <option value="all">All Protocols</option>
+                <option value="tcp">TCP</option>
+                <option value="udp">UDP</option>
+            </select>
+            <button class="reset-btn" onclick="resetFilters()">Reset Filters</button>
+        </div>
+
+        <main class="content">
+            <table class="results-table" id="resultsTable">
+                <thead>
+                    <tr>
+                        <th class="sortable" onclick="sortTable(0)">Host <span class="sort-icon">&#x25B4;&#x25BE;</span></th>
+                        <th class="sortable" onclick="sortTable(1)">Port <span class="sort-icon">&#x25B4;&#x25BE;</span></th>
+                        <th class="sortable" onclick="sortTable(2)">Protocol <span class="sort-icon">&#x25B4;&#x25BE;</span></th>
+                        <th class="sortable" onclick="sortTable(3)">State <span class="sort-icon">&#x25B4;&#x25BE;</span></th>
+                        <th class="sortable" onclick="sortTable(4)">Service <span class="sort-icon">&#x25B4;&#x25BE;</span></th>
+                        <th class="sortable" onclick="sortTable(5)">Version <span class="sort-icon">&#x25B4;&#x25BE;</span></th>
+                        <th class="sortable" onclick="sortTable(6)">Severity <span class="sort-icon">&#x25B4;&#x25BE;</span></th>
+                        <th>Credentials</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody">
+                </tbody>
+            </table>
         </main>
     </div>
 
-    <!-- Data payload will be injected by the Bash script below -->
+    <!-- Data payload injected by the Bash script -->
     <script id="vulnerData" type="application/json">
         []
     </script>
