@@ -50,6 +50,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     service: p.service || 'Unknown',
                     version: p.version || 'Unknown',
                     severity: p.severity || 'low',
+                    cves: p.cves || [],
                     cred: hostCreds[p.service] || ''
                 });
             });
@@ -252,6 +253,14 @@ function renderTable(rows) {
         // Credentials cell
         var credHtml = r.cred ? '<span class="cred-badge">' + escapeHtml(r.cred) + '</span>' : '<span style="color:#475569">—</span>';
 
+        // Remediation cell (CVE links)
+        var cveHtml = '<span style="color:#475569">—</span>';
+        if (r.cves && r.cves.length > 0) {
+            cveHtml = r.cves.map(function(cve) {
+                return '<a href="https://nvd.nist.gov/vuln/detail/' + escapeHtml(cve) + '" target="_blank" class="cve-link">' + escapeHtml(cve) + '</a>';
+            }).join(' ');
+        }
+
         tr.innerHTML =
             '<td>' + escapeHtml(r.ip) + '</td>' +
             '<td><span class="port-num">' + escapeHtml(r.port) + '</span></td>' +
@@ -260,7 +269,8 @@ function renderTable(rows) {
             '<td>' + escapeHtml(r.service) + '</td>' +
             '<td>' + escapeHtml(r.version) + '</td>' +
             '<td>' + sevHtml + '</td>' +
-            '<td>' + credHtml + '</td>';
+            '<td>' + credHtml + '</td>' +
+            '<td>' + cveHtml + '</td>';
 
         tbody.appendChild(tr);
     });

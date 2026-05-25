@@ -17,6 +17,7 @@ The script uses `curl` or `wget` to download `index.html`, `style.css`, and `scr
 - **Sortable Table**: Click any column header (Host, Port, Protocol, State, Service, Version, Severity) to sort ascending/descending
 - **Per-Column Filters**: Filter by Host IP, Service, State, Severity, or Protocol independently
 - **Statistics Dashboard**: Live cards showing Total Hosts, Open Ports, Vulnerabilities, and Weak Credentials
+- **Remediation Links**: Automatically extracts CVE IDs from Nmap XML outputs and renders them as clickable links to the NVD database (e.g. CVE-2011-2523)
 - **Reset Filters**: One-click button to clear all active filters
 - **XSS Safe**: All data is HTML-escaped before rendering
 - **No External Libraries**: Pure HTML, CSS, and JavaScript — no dependencies
